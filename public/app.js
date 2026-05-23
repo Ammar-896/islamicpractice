@@ -220,11 +220,13 @@ function buildResults() {
         <div class="r-answer-row"><span class="lbl">الإجابة الصحيحة:</span> <span class="val-correct">${q.correct ? 'صحيح ✓' : 'خطأ ✗'}</span></div>`;
     }
     else if (q.type === 'fill') {
-      // Lenient: check if user answer contains key words
       const userText = (userVal || '').trim();
       const refText  = q.answer.trim();
-      const isExact  = normalizeAr(userText).includes(normalizeAr(refText.split('—')[0].split(' ')[0])) ||
-                       normalizeAr(refText).includes(normalizeAr(userText.split(' ')[0]));
+      // CRITICAL: empty answer is always wrong
+      const isExact  = userText.length > 0 && (
+        normalizeAr(userText).includes(normalizeAr(refText.split('—')[0].split(' ')[0])) ||
+        normalizeAr(refText).includes(normalizeAr(userText.split(' ')[0]))
+      );
       if (isExact) { autoCorrect++; cardClass = 'r-correct'; statusIcon = '✅'; }
       else { cardClass = 'r-wrong'; statusIcon = '❌'; }
       autoTotal++;
@@ -235,12 +237,20 @@ function buildResults() {
         ${!isExact ? `<div class="r-answer-row"><span class="lbl">الإجابة النموذجية:</span> <span class="val-correct">${refText}</span></div>` : ''}`;
     }
     else if (q.type === 'short') {
-      cardClass  = 'r-pending'; statusIcon = '⏳';
-      scoreHtml  = `<span class="r-score-badge pending" id="score-badge-${q.id}">جارٍ التصحيح…</span>`;
-      answerRows = `<div class="r-answer-row"><span class="lbl">إجابتك:</span> <span class="val-student">${(userVal || '(لم يُجَب)').replace(/\n/g,'<br/>')}</span></div>`;
-      extraHtml  = `<div class="r-ai-pending" id="ai-pending-${q.id}"><div class="spinner"></div> يُصحَّح بالذكاء الاصطناعي…</div>
-                    <div class="r-ai-feedback hidden" id="ai-fb-${q.id}"></div>`;
-      aiQueue.push(q);
+      const hasAnswer = userVal && userVal.trim().length > 0;
+      if (hasAnswer) {
+        cardClass  = 'r-pending'; statusIcon = '⏳';
+        scoreHtml  = `<span class="r-score-badge pending" id="score-badge-${q.id}">جارٍ التصحيح…</span>`;
+        answerRows = `<div class="r-answer-row"><span class="lbl">إجابتك:</span> <span class="val-student">${userVal.replace(/\n/g,'<br/>')}</span></div>`;
+        extraHtml  = `<div class="r-ai-pending" id="ai-pending-${q.id}"><div class="spinner"></div> يُصحَّح بالذكاء الاصطناعي…</div>
+                      <div class="r-ai-feedback hidden" id="ai-fb-${q.id}"></div>`;
+        aiQueue.push(q);
+      } else {
+        cardClass  = 'r-wrong'; statusIcon = '❌';
+        scoreHtml  = `<span class="r-score-badge wrong">0 / 10</span>`;
+        answerRows = `<div class="r-answer-row"><span class="lbl">إجابتك:</span> <span class="val-wrong">(لم يُجَب)</span></div>`;
+        extraHtml  = q.modelAnswer ? `<div class="r-ai-feedback"><span class="feedback-label">الإجابة النموذجية:</span><span style="color:var(--text2)">${q.modelAnswer.replace(/\n/g,'<br/>')}</span></div>` : '';
+      }
     }
 
     const expHtml = q.explanation
