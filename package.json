@@ -1,0 +1,16 @@
+{
+  "name": "islamic-exam-grade7",
+  "version": "1.0.0",
+  "description": "Islamic Education Exam — Grade 7 — Term 3 Review",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "devDependencies": {
+    "vercel": "^33.0.0"
+  }
+}
