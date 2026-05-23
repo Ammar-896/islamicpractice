@@ -23,7 +23,25 @@ export default async function handler(req, res) {
 
   const userText = studentAnswer.trim() || '(لم يُجَب)';
 
-  const prompt = `أنت مصحح متخصص في مادة التربية الإسلامية للصف السابع الإعدادي.
+  // Pre-check: irrelevant / test / non-Arabic answers → instant 0
+  const lowerUser = userText.toLowerCase();
+  const isGibberish = (
+    lowerUser.includes('test') ||
+    lowerUser.includes('hello') ||
+    lowerUser.includes('asdf') ||
+    lowerUser.includes('lorem') ||
+    /^[a-z\s\d]{1,30}$/i.test(userText) ||   // pure Latin text (not a real Arabic answer)
+    userText.length < 5                         // too short to be a real answer
+  );
+
+  if (isGibberish) {
+    return res.status(200).json({
+      score: 0,
+      feedback: 'الإجابة غير ذات صلة بالسؤال أو مكتوبة بلغة غير عربية. الدرجة: صفر.'
+    });
+  }
+
+  const prompt = `أنت مصحح صارم ومتخصص في مادة التربية الإسلامية للصف السابع الإعدادي.
 
 الموضوع: ${topic || 'تربية إسلامية'}
 السؤال: ${question}
@@ -34,11 +52,13 @@ ${modelAnswer || 'غير متوفرة'}
 إجابة الطالب:
 ${userText}
 
-المطلوب: قيّم إجابة الطالب من 10 درجات مع مراعاة ما يلي:
-- لا يُشترط التطابق الحرفي مع الإجابة النموذجية
-- المعنى الصحيح والفهم الجيد يُعطى درجة كاملة
-- الإجابة الجزئية الصحيحة تُعطى درجة جزئية
-- الإجابة الخاطئة أو الفارغة تُعطى صفراً أو درجة منخفضة
+قواعد التصحيح الصارمة:
+- إجابة لا علاقة لها بالسؤال = 0 درجة فوراً
+- إجابة صحيحة المعنى ومكتملة = 9-10 درجات
+- إجابة صحيحة جزئياً = 4-7 حسب نسبة الاكتمال
+- إجابة خاطئة أو مجرد كلمة أو جملة عشوائية = 0-2 درجة
+- لا تكن كريماً في الدرجات — الدرجة يجب أن تعكس جودة الإجابة بدقة
+- إجابة "test" أو كلام بالإنجليزي أو كلام لا معنى له = 0 درجة
 
 أجب بصيغة JSON فقط بدون أي نص إضافي أو علامات markdown:
 {"score": <رقم من 0 إلى 10>, "feedback": "<تعليق مختصر بالعربية يشرح سبب الدرجة ونقاط القوة والضعف>"}`;
